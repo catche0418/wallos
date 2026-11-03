@@ -1,0 +1,3206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WallOS">
+<meta name="format-detection" content="telephone=no">
+<title>WallOS</title>
+<style>
+/* ===== Reset & base ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  background: #F2EFE8;
+  color: #1C1A18;
+}
+* { box-sizing: border-box; }
+input, textarea {
+  -webkit-user-select: text;
+  font-size: 22px;
+  font-family: inherit;
+}
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ===== Tokens (light default) ===== */
+body {
+  --bg: #F2EFE8;
+  --surface: #F8F5EC;
+  --ink: #1C1A18;
+  --muted: #857A70;
+  --accent: #A38A7B;
+  --line: rgba(28,26,24,.14);
+  --radius: 28px;
+  --radius-sm: 14px;
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 16px; /* base for textScale */
+}
+body.theme-dark {
+  --bg: #14110F;
+  --surface: #0B0B0B;
+  --ink: #EFEAE0;
+  --muted: #9A8F84;
+  --accent: #B9A394;
+  --line: rgba(239,234,224,.16);
+}
+body.text-0 { font-size: 14.4px; }
+body.text-1 { font-size: 16px; }
+body.text-2 { font-size: 18.4px; }
+body.text-3 { font-size: 20.8px; }
+
+/* Safe areas with fallbacks */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+    --safe-left: env(safe-area-inset-left);
+    --safe-right: env(safe-area-inset-right);
+  }
+}
+
+/* ===== Shell ===== */
+#root {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  max-width: 1280px;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow: hidden;
+}
+#status {
+  height: 56px;
+  padding: 0 16px;
+  padding-top: var(--safe-top);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+  position: relative;
+  z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+#status .time {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 32px;
+  font-weight: 400;
+  min-width: 110px;
+}
+#status .date {
+  position: absolute;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+#status .right {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  min-width: 110px;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+}
+#status .glyph {
+  width: 28px;
+  height: 28px;
+  margin-left: 8px;
+  color: var(--muted);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+#status .home-btn {
+  width: 52px;
+  height: 52px;
+  margin-left: 8px;
+  border-radius: 50%;
+  display: none;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+body.in-app #status .home-btn { display: -webkit-flex; display: flex; }
+
+#content {
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#dock {
+  height: 96px;
+  padding-bottom: var(--safe-bottom);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+  z-index: 40;
+}
+body.in-app #dock { display: none; }
+.dock-item {
+  width: 96px;
+  height: 80px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  color: var(--ink);
+  margin: 0 4px;
+}
+.dock-item .icon {
+  width: 56px;
+  height: 56px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+.dock-item .label {
+  font-size: 16px;
+  margin-top: 2px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+/* ===== Ambient ===== */
+#ambient {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  display: none;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+body.state-ambient #ambient { display: -webkit-flex; display: flex; }
+body.state-ambient #status,
+body.state-ambient #content,
+body.state-ambient #dock { visibility: hidden; }
+
+#ambient .clock {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 200px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+#ambient .date {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  margin-top: 12px;
+  color: var(--muted);
+}
+#ambient .next {
+  margin-top: 32px;
+  font-size: 22px;
+  color: var(--muted);
+  max-width: 80%;
+  text-align: center;
+}
+
+/* ===== Night ===== */
+#night {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #000;
+  display: none;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  z-index: 200;
+  color: rgba(255,255,255,0.15);
+}
+body.state-night #night { display: -webkit-flex; display: flex; }
+body.state-night #status,
+body.state-night #content,
+body.state-night #dock,
+body.state-night #ambient { visibility: hidden; }
+#night .clock {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 160px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* ===== Home widgets ===== */
+#home {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  padding: 24px;
+  display: none;
+  overflow: hidden;
+}
+body.state-home #home { display: block; }
+
+.widget {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  position: absolute;
+}
+.widget-title {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 36px;
+  font-weight: 400;
+  margin: 0 0 8px 0;
+  padding: 0 20px;
+  padding-top: 16px;
+}
+.widget-body {
+  padding: 0 20px 16px;
+}
+
+/* Full layout positions (976 usable, 16 gutters) */
+#w-today { left: 24px; top: 24px; width: 560px; height: 584px; }
+#w-month { left: 600px; top: 24px; width: 400px; height: 330px; }
+#w-countdown { left: 600px; top: 370px; width: 192px; height: 238px; }
+#w-tasks { left: 808px; top: 370px; width: 192px; height: 238px; }
+
+/* Portrait stacking */
+@media (max-width: 900px) {
+  #home { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #w-today, #w-month, #w-countdown, #w-tasks {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-bottom: 16px;
+  }
+  #w-today { min-height: 320px; }
+  #w-month { min-height: 300px; }
+  #w-countdown, #w-tasks { min-height: 180px; display: inline-block; width: 48% !important; }
+}
+
+/* Today widget */
+#w-today .now-label {
+  font-size: 16px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+#w-today .now-title {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  line-height: 1.15;
+  margin-bottom: 4px;
+}
+#w-today .now-meta {
+  font-size: 22px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+#w-today .list-row {
+  display: -webkit-flex;
+  display: flex;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 22px;
+}
+#w-today .list-time {
+  width: 90px;
+  color: var(--muted);
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+#w-today .empty {
+  font-size: 28px;
+  color: var(--muted);
+  padding-top: 40px;
+}
+
+/* Month widget */
+#w-month .month-name {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 32px;
+  padding: 16px 20px 8px;
+}
+#w-month .weekdays {
+  display: -webkit-flex;
+  display: flex;
+  padding: 0 12px;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+#w-month .weekdays span {
+  -webkit-flex: 1;
+  flex: 1;
+  text-align: center;
+}
+#w-month .grid {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  padding: 4px 12px 12px;
+}
+#w-month .day {
+  width: 14.28%;
+  height: 36px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  font-size: 18px;
+  position: relative;
+}
+#w-month .day.other { color: var(--muted); opacity: 0.5; }
+#w-month .day.today span.num {
+  background: var(--ink);
+  color: var(--surface);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+#w-month .dots {
+  display: -webkit-flex;
+  display: flex;
+  height: 6px;
+  margin-top: 1px;
+}
+#w-month .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin: 0 1px;
+  background: var(--accent);
+}
+
+/* Countdown widget */
+#w-countdown .days {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 120px;
+  line-height: 1;
+  text-align: center;
+  padding-top: 12px;
+}
+#w-countdown .name {
+  font-size: 20px;
+  text-align: center;
+  margin-top: 4px;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#w-countdown .date {
+  font-size: 16px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 2px;
+}
+#w-countdown .empty {
+  font-size: 20px;
+  color: var(--muted);
+  text-align: center;
+  padding-top: 60px;
+}
+
+/* Tasks widget */
+#w-tasks .task-row {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  padding: 8px 0;
+  min-height: 52px;
+}
+#w-tasks .check {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  margin-right: 10px;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  color: var(--ink);
+}
+#w-tasks .check.done {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+#w-tasks .task-text {
+  font-size: 20px;
+  -webkit-flex: 1;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#w-tasks .task-text.done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+#w-tasks .all-done {
+  font-size: 22px;
+  color: var(--muted);
+  text-align: center;
+  padding-top: 40px;
+}
+
+/* ===== App shell ===== */
+.app-view {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  z-index: 30;
+  opacity: 0;
+  -webkit-transform: scale(0.94);
+  transform: scale(0.94);
+  -webkit-transition: opacity 280ms ease-out, -webkit-transform 280ms ease-out;
+  transition: opacity 280ms ease-out, transform 280ms ease-out;
+  pointer-events: none;
+}
+.app-view.open {
+  opacity: 1;
+  -webkit-transform: scale(1);
+  transform: scale(1);
+  pointer-events: auto;
+}
+.app-view.closing {
+  opacity: 0;
+  -webkit-transform: scale(0.94);
+  transform: scale(0.94);
+  pointer-events: none;
+}
+.app-header {
+  height: 64px;
+  padding: 0 16px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+.app-header .back {
+  width: 52px;
+  height: 52px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  margin-right: 8px;
+  color: var(--ink);
+}
+.app-header .title {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  font-weight: 400;
+  -webkit-flex: 1;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-header .actions {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+}
+.app-header .btn {
+  min-width: 52px;
+  height: 44px;
+  padding: 0 14px;
+  margin-left: 6px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+.app-header .btn.primary {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+.app-body {
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+.app-scroll {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 24px;
+}
+
+/* Push views */
+.push-view {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-transform: translate3d(100%,0,0);
+  transform: translate3d(100%,0,0);
+  -webkit-transition: -webkit-transform 280ms ease-out;
+  transition: transform 280ms ease-out;
+  z-index: 35;
+}
+.push-view.open {
+  -webkit-transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0);
+}
+.push-view.closing {
+  -webkit-transform: translate3d(100%,0,0);
+  transform: translate3d(100%,0,0);
+}
+
+/* ===== Sheets ===== */
+#sheet-mask {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transition: opacity 280ms ease-out;
+  transition: opacity 280ms ease-out;
+}
+#sheet-mask.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+#sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 86%;
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  z-index: 90;
+  -webkit-transform: translate3d(0,100%,0);
+  transform: translate3d(0,100%,0);
+  -webkit-transition: -webkit-transform 280ms ease-out;
+  transition: transform 280ms ease-out;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  overflow: hidden;
+}
+#sheet.open {
+  -webkit-transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0);
+}
+#sheet .sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  margin: 10px auto 6px;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+#sheet .sheet-body {
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 24px 32px;
+  min-height: 0;
+}
+#sheet .sheet-title {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 36px;
+  margin: 0 0 16px;
+}
+.field {
+  margin-bottom: 18px;
+}
+.field label {
+  display: block;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.field input[type="text"],
+.field input[type="date"],
+.field input[type="time"],
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 22px;
+}
+.field textarea { min-height: 80px; resize: none; }
+.chips {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  margin: -4px;
+}
+.chip {
+  padding: 10px 16px;
+  margin: 4px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  font-size: 18px;
+  color: var(--ink);
+  min-height: 44px;
+}
+.chip.active {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+.sheet-actions {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+}
+.sheet-actions .btn {
+  min-width: 100px;
+  height: 48px;
+  padding: 0 20px;
+  margin-left: 10px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+.sheet-actions .btn.primary {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+.sheet-actions .btn.danger {
+  color: #B5524A;
+  border-color: #B5524A;
+}
+.inline-msg {
+  font-size: 18px;
+  color: #B5524A;
+  margin-top: 6px;
+}
+
+/* ===== Calendar specific ===== */
+.cal-seg {
+  display: -webkit-flex;
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+.cal-seg button {
+  padding: 8px 16px;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-height: 40px;
+}
+.cal-seg button.active {
+  background: var(--ink);
+  color: var(--surface);
+}
+.month-grid-full {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  padding: 8px 12px 24px;
+}
+.month-grid-full .cell {
+  width: 14.28%;
+  height: 72px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  padding: 4px;
+  position: relative;
+  font-size: 18px;
+}
+.month-grid-full .cell:nth-child(7n) { border-right: none; }
+.month-grid-full .cell.other { color: var(--muted); opacity: 0.45; }
+.month-grid-full .cell.today .num {
+  background: var(--ink);
+  color: var(--surface);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: -webkit-inline-flex;
+  display: inline-flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+.month-grid-full .cell .dots {
+  display: -webkit-flex;
+  display: flex;
+  margin-top: 2px;
+}
+.month-grid-full .cell .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-right: 2px;
+  background: var(--accent);
+}
+.month-grid-full .cell .more {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+/* Day timeline */
+.day-allday {
+  padding: 8px 16px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  min-height: 40px;
+}
+.day-allday .pill {
+  padding: 6px 12px;
+  margin: 4px;
+  border-radius: 14px;
+  font-size: 18px;
+  background: var(--accent);
+  color: #fff;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.day-timeline {
+  position: relative;
+  height: 960px; /* 16 hours * 60 */
+  margin-left: 56px;
+}
+.day-timeline .hour-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--line);
+}
+.day-timeline .hour-label {
+  position: absolute;
+  left: -52px;
+  width: 48px;
+  text-align: right;
+  font-size: 14px;
+  color: var(--muted);
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+.day-timeline .now-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  z-index: 5;
+}
+.day-timeline .now-dot {
+  position: absolute;
+  left: -6px;
+  top: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.day-timeline .ev-block {
+  position: absolute;
+  border-radius: 8px;
+  padding: 4px 8px;
+  overflow: hidden;
+  font-size: 18px;
+  color: #fff;
+  min-height: 36px;
+  z-index: 2;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.day-timeline .ev-block .t { font-weight: 400; }
+
+/* Settings list */
+.settings-list {
+  padding: 0;
+}
+.settings-row {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 24px;
+}
+.settings-row .chev {
+  margin-left: auto;
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+}
+.settings-row .val {
+  margin-left: auto;
+  margin-right: 12px;
+  color: var(--muted);
+  font-size: 20px;
+}
+.seg-control {
+  display: -webkit-flex;
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.seg-control button {
+  -webkit-flex: 1;
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 18px;
+  color: var(--muted);
+  min-height: 48px;
+}
+.seg-control button.active {
+  background: var(--ink);
+  color: var(--surface);
+}
+.radio-row {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 0;
+  font-size: 22px;
+}
+.radio-row .radio {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  margin-right: 14px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+.radio-row .radio.on::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.export-area {
+  width: 100%;
+  min-height: 160px;
+  font-size: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-user-select: text;
+  font-family: monospace;
+}
+
+/* Toast / reminder banner */
+#toast {
+  position: absolute;
+  top: 56px;
+  left: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  z-index: 60;
+  display: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+#toast.show { display: block; }
+#toast .t-title {
+  font-family: Didot, "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 28px;
+}
+#toast .t-sub {
+  font-size: 18px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Utility */
+.hidden { display: none !important; }
+.scroll { -webkit-overflow-scrolling: touch; }
+.cat-school { background: #6F7F8F; }
+.cat-exams { background: #B5524A; }
+.cat-personal { background: #7F9A82; }
+.cat-other { background: #A38A7B; }
+</style>
+</head>
+<body class="text-1">
+<div id="root">
+  <div id="status">
+    <div class="time" id="status-time">--:--</div>
+    <div class="date" id="status-date"></div>
+    <div class="right">
+      <div class="glyph" id="glyph-storage" title="Storage"></div>
+      <div class="glyph" id="glyph-night"></div>
+      <button class="home-btn" id="btn-home" aria-label="Home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="content">
+    <div id="home"></div>
+  </div>
+  <div id="dock"></div>
+  <div id="ambient">
+    <div class="clock" id="amb-clock">--:--</div>
+    <div class="date" id="amb-date"></div>
+    <div class="next" id="amb-next"></div>
+  </div>
+  <div id="night">
+    <div class="clock" id="night-clock">--:--</div>
+  </div>
+  <div id="toast">
+    <div class="t-title" id="toast-title"></div>
+    <div class="t-sub" id="toast-sub"></div>
+  </div>
+  <div id="sheet-mask"></div>
+  <div id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   WallOS Phase 1 — complete single-file implementation
+   ES5 only, iOS 12 Safari safe
+   ============================================================ */
+
+/* ---------- 1. Constants and defaults ---------- */
+var STORAGE_KEY = "wallos_v1";
+var OLD_KEY = "wallcal_v1";
+var VERSION = 3;
+var HOUR_H = 60; // px per hour in day view
+var DAY_START = 7;
+var DAY_END = 22;
+var TRANS_MS = 280;
+var TAP_GUARD_MS = 350;
+var LONG_PRESS_MS = 600;
+
+var DEFAULTS = {
+  settings: {
+    theme: "light",
+    textScale: 1,
+    clock24: false,
+    weekStartsMonday: true,
+    layout: "full",
+    carryOver: true,
+    reminderMinutes: 10,
+    ambientMinutes: 10,
+    idleReturnMinutes: 3,
+    nightMode: { on: false, start: "22:00", end: "06:30" }
+  },
+  categories: [
+    { id: "school", name: "School", color: "#6F7F8F" },
+    { id: "exams", name: "Exams", color: "#B5524A" },
+    { id: "personal", name: "Personal", color: "#7F9A82" },
+    { id: "other", name: "Other", color: "#A38A7B" }
+  ],
+  calendars: [
+    { id: "local", name: "This iPad", color: "#8C7B6E", imported: false, hidden: false }
+  ],
+  events: [],
+  countdowns: [],
+  tasks: { date: "", items: [{ text: "", done: false }, { text: "", done: false }, { text: "", done: false }] },
+  welcomed: false
+};
+
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var DAYS_LETTER = ["S","M","T","W","T","F","S"];
+
+/* ---------- 2. Date helpers ---------- */
+function pad(n) {
+  n = n | 0;
+  return n < 10 ? "0" + n : "" + n;
+}
+function sod(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function addDays(d, n) {
+  var x = new Date(d.getTime());
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function daysBetween(a, b) {
+  var ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  var ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((ub - ua) / 86400000);
+}
+function iso(d, withTime) {
+  var s = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  if (withTime) s += "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return s;
+}
+function parseLocalISO(s) {
+  if (!s) return null;
+  var parts = s.split("T");
+  var dparts = parts[0].split("-");
+  var y = parseInt(dparts[0], 10);
+  var m = parseInt(dparts[1], 10) - 1;
+  var d = parseInt(dparts[2], 10);
+  if (parts.length > 1) {
+    var tparts = parts[1].split(":");
+    return new Date(y, m, d, parseInt(tparts[0], 10) || 0, parseInt(tparts[1], 10) || 0);
+  }
+  return new Date(y, m, d);
+}
+function fmtTime(d, clock24) {
+  var h = d.getHours();
+  var mi = d.getMinutes();
+  if (clock24) return pad(h) + ":" + pad(mi);
+  var ap = h >= 12 ? "pm" : "am";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return h + ":" + pad(mi) + ap;
+}
+function fmtDate(d) {
+  return DAYS_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS_SHORT[d.getMonth()];
+}
+function fmtFullDate(d) {
+  return DAYS[d.getDay()].toUpperCase() + " " + d.getDate() + " " + MONTHS[d.getMonth()].toUpperCase() + " " + d.getFullYear();
+}
+
+/* ---------- 3. Storage ---------- */
+var store = null;
+var storageOk = true;
+var saveTimer = null;
+
+function loadStore() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      store = JSON.parse(raw);
+      if (!store.ver) store.ver = 1;
+      migrateIfNeeded();
+      return;
+    }
+    // migrate from wallcal_v1
+    var old = localStorage.getItem(OLD_KEY);
+    if (old) {
+      var o = JSON.parse(old);
+      store = {
+        ver: VERSION,
+        settings: {
+          theme: o.settings && o.settings.theme || "light",
+          textScale: o.settings && o.settings.textScale != null ? o.settings.textScale : 1,
+          clock24: o.settings && o.settings.clock24 || false,
+          weekStartsMonday: o.settings && o.settings.weekStartsMonday != null ? o.settings.weekStartsMonday : true,
+          layout: "full",
+          carryOver: o.settings && o.settings.carryOver != null ? o.settings.carryOver : true,
+          reminderMinutes: 10,
+          ambientMinutes: 10,
+          idleReturnMinutes: o.settings && o.settings.idleReturnMinutes != null ? o.settings.idleReturnMinutes : 3,
+          nightMode: o.settings && o.settings.nightMode || { on: false, start: "22:00", end: "06:30" }
+        },
+        categories: o.categories || DEFAULTS.categories.slice(),
+        calendars: o.calendars || DEFAULTS.calendars.slice(),
+        events: o.events || [],
+        countdowns: o.countdowns || [],
+        tasks: o.tasks || DEFAULTS.tasks,
+        welcomed: false
+      };
+      saveStore(true);
+      return;
+    }
+  } catch (e) {
+    storageOk = false;
+  }
+  store = JSON.parse(JSON.stringify(DEFAULTS));
+  store.ver = VERSION;
+  seedFirstRun();
+}
+
+function migrateIfNeeded() {
+  if (store.ver < 3) {
+    store.ver = VERSION;
+    if (!store.settings.layout) store.settings.layout = "full";
+    if (store.settings.reminderMinutes == null) store.settings.reminderMinutes = 10;
+    if (store.settings.ambientMinutes == null) store.settings.ambientMinutes = 10;
+    if (!store.calendars || !store.calendars.length) {
+      store.calendars = DEFAULTS.calendars.slice();
+    }
+  }
+}
+
+function seedFirstRun() {
+  var today = sod(new Date());
+  var tomorrow = addDays(today, 1);
+  store.events = [
+    { id: uid(), title: "Example: Morning study", start: iso(today) + "T09:00", end: iso(today) + "T10:30", allDay: false, category: "school", notes: "", location: "", calendarId: "local", repeat: null },
+    { id: uid(), title: "Example: Team meeting", start: iso(today) + "T14:00", end: iso(today) + "T15:00", allDay: false, category: "personal", notes: "", location: "Room 3", calendarId: "local", repeat: null },
+    { id: uid(), title: "Example: Legal exam", start: iso(tomorrow) + "T09:00", end: iso(tomorrow) + "T11:00", allDay: false, category: "exams", notes: "", location: "Hall A", calendarId: "local", repeat: null }
+  ];
+  store.countdowns = [
+    { id: uid(), name: "Business Management exam", date: iso(addDays(today, 12)), time: "09:00" },
+    { id: uid(), name: "Legal exam", date: iso(tomorrow), time: "09:00" }
+  ];
+  store.tasks = {
+    date: iso(today),
+    items: [
+      { text: "Review notes", done: false },
+      { text: "Practice questions", done: false },
+      { text: "Pack bag", done: false }
+    ]
+  };
+  store.welcomed = false;
+}
+
+function saveStore(immediate) {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  function doSave() {
+    try {
+      var json = JSON.stringify(store, function (k, v) {
+        if (k && k.charAt(0) === "_") return undefined;
+        return v;
+      });
+      localStorage.setItem(STORAGE_KEY, json);
+      storageOk = true;
+    } catch (e) {
+      storageOk = false;
+    }
+    updateStorageGlyph();
+  }
+  if (immediate) doSave();
+  else saveTimer = setTimeout(doSave, 400);
+}
+
+function uid() {
+  return "id" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+}
+
+/* ---------- 4. Event engine ---------- */
+function catColor(id) {
+  var i, c = store.categories;
+  for (i = 0; i < c.length; i++) if (c[i].id === id) return c[i].color;
+  return "#A38A7B";
+}
+function isCalHidden(cid) {
+  var i, c = store.calendars;
+  for (i = 0; i < c.length; i++) if (c[i].id === cid) return !!c[i].hidden;
+  return false;
+}
+
+function expandOccurrence(e, day) {
+  // returns {e, s, en} or null if no occurrence on day
+  if (isCalHidden(e.calendarId)) return null;
+  var start = parseLocalISO(e.start);
+  var end = parseLocalISO(e.end);
+  if (!start || !end) return null;
+
+  if (!e.repeat) {
+    if (e.allDay) {
+      var sDay = sod(start);
+      var eDay = sod(end);
+      if (day.getTime() >= sDay.getTime() && day.getTime() <= eDay.getTime()) {
+        return { e: e, s: start, en: end };
+      }
+      return null;
+    }
+    if (sameDay(start, day)) return { e: e, s: start, en: end };
+    return null;
+  }
+
+  // Simple repeat support for Phase 1 (daily/weekly/monthly)
+  var rule = e.repeat;
+  if (typeof rule === "string") {
+    var sDay = sod(start);
+    if (day.getTime() < sDay.getTime()) return null;
+    if (rule === "daily") {
+      return { e: e, s: new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.getHours(), start.getMinutes()),
+               en: new Date(day.getFullYear(), day.getMonth(), day.getDate(), end.getHours(), end.getMinutes()) };
+    }
+    if (rule === "weekly") {
+      if (day.getDay() === start.getDay()) {
+        return { e: e, s: new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.getHours(), start.getMinutes()),
+                 en: new Date(day.getFullYear(), day.getMonth(), day.getDate(), end.getHours(), end.getMinutes()) };
+      }
+      return null;
+    }
+    if (rule === "monthly") {
+      if (day.getDate() === start.getDate()) {
+        return { e: e, s: new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.getHours(), start.getMinutes()),
+                 en: new Date(day.getFullYear(), day.getMonth(), day.getDate(), end.getHours(), end.getMinutes()) };
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function dayEvs(date) {
+  var day = sod(date);
+  var list = [];
+  var i, occ;
+  for (i = 0; i < store.events.length; i++) {
+    occ = expandOccurrence(store.events[i], day);
+    if (occ) list.push(occ);
+  }
+  list.sort(function (a, b) {
+    if (a.e.allDay && !b.e.allDay) return -1;
+    if (!a.e.allDay && b.e.allDay) return 1;
+    return a.s.getTime() - b.s.getTime();
+  });
+  return list;
+}
+
+function nextEv(now) {
+  var i, occ, best = null, bestStart = null;
+  var horizon = addDays(sod(now), 7);
+  var d = sod(now);
+  while (d.getTime() <= horizon.getTime()) {
+    var list = dayEvs(d);
+    for (i = 0; i < list.length; i++) {
+      occ = list[i];
+      if (occ.e.allDay) continue;
+      if (occ.en.getTime() > now.getTime()) {
+        if (!bestStart || occ.s.getTime() < bestStart) {
+          best = occ;
+          bestStart = occ.s.getTime();
+        }
+      }
+    }
+    if (best && sameDay(best.s, d)) break;
+    d = addDays(d, 1);
+  }
+  return best;
+}
+
+function busyCount(date) {
+  return dayEvs(date).length;
+}
+
+/* ---------- 5. ICS parser (stub for Phase 1 – full in Phase 3) ---------- */
+function parseICS(text) {
+  // Minimal safe stub; full parser in Phase 3
+  return { events: [], name: "Imported", skipped: 0, total: 0 };
+}
+
+/* ---------- 6. Quick-add parser ---------- */
+function parseQuickAdd(str) {
+  var result = { title: "", date: null, start: null, end: null, message: "" };
+  if (!str || !str.replace(/\s/g, "").length) {
+    result.message = "Enter a title and optional time";
+    return result;
+  }
+  var s = str.replace(/\s+/g, " ").trim();
+  var lower = s.toLowerCase();
+  var now = new Date();
+  var today = sod(now);
+
+  // Extract time range first
+  var timeRe = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*[-–—to]+\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+  var timeSingle = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i;
+  var m = s.match(timeRe);
+  var startH = null, startM = 0, endH = null, endM = 0, ap = null;
+
+  if (m) {
+    startH = parseInt(m[1], 10);
+    startM = m[2] ? parseInt(m[2], 10) : 0;
+    ap = (m[3] || m[6] || "").toLowerCase();
+    endH = parseInt(m[4], 10);
+    endM = m[5] ? parseInt(m[5], 10) : 0;
+    var endAp = (m[6] || m[3] || "").toLowerCase();
+    if (ap === "pm" && startH < 12) startH += 12;
+    if (ap === "am" && startH === 12) startH = 0;
+    if (endAp === "pm" && endH < 12) endH += 12;
+    if (endAp === "am" && endH === 12) endH = 0;
+    s = s.replace(m[0], " ").replace(/\s+/g, " ").trim();
+  } else {
+    m = s.match(timeSingle);
+    if (m) {
+      startH = parseInt(m[1], 10);
+      startM = m[2] ? parseInt(m[2], 10) : 0;
+      ap = (m[3] || "").toLowerCase();
+      if (ap === "pm" && startH < 12) startH += 12;
+      if (ap === "am" && startH === 12) startH = 0;
+      endH = startH + 1;
+      endM = startM;
+      s = s.replace(m[0], " ").replace(/\s+/g, " ").trim();
+    }
+  }
+
+  // Date tokens
+  var dateFound = null;
+  if (/\btoday\b/i.test(s)) {
+    dateFound = today;
+    s = s.replace(/\btoday\b/i, " ").replace(/\s+/g, " ").trim();
+  } else if (/\btomorrow\b/i.test(s)) {
+    dateFound = addDays(today, 1);
+    s = s.replace(/\btomorrow\b/i, " ").replace(/\s+/g, " ").trim();
+  } else {
+    var dayNames = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+    var di, dn;
+    for (di = 0; di < 7; di++) {
+      dn = dayNames[di];
+      var re = new RegExp("\\b" + dn + "\\b", "i");
+      if (re.test(s)) {
+        var target = di;
+        var diff = (target - today.getDay() + 7) % 7;
+        if (diff === 0) diff = 7; // next occurrence strictly after today
+        dateFound = addDays(today, diff);
+        s = s.replace(re, " ").replace(/\s+/g, " ").trim();
+        break;
+      }
+    }
+    if (!dateFound) {
+      // D Mon or D/M
+      var dm = s.match(/\b(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i);
+      if (dm) {
+        var mon = MONTHS_SHORT.join(" ").toLowerCase().indexOf(dm[2].toLowerCase().substring(0, 3));
+        mon = Math.floor(mon / 4);
+        dateFound = new Date(today.getFullYear(), mon, parseInt(dm[1], 10));
+        if (dateFound.getTime() < today.getTime()) dateFound.setFullYear(dateFound.getFullYear() + 1);
+        s = s.replace(dm[0], " ").replace(/\s+/g, " ").trim();
+      } else {
+        var dmy = s.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+        if (dmy) {
+          var dd = parseInt(dmy[1], 10);
+          var mm = parseInt(dmy[2], 10) - 1;
+          var yy = dmy[3] ? parseInt(dmy[3], 10) : today.getFullYear();
+          if (yy < 100) yy += 2000;
+          dateFound = new Date(yy, mm, dd);
+          s = s.replace(dmy[0], " ").replace(/\s+/g, " ").trim();
+        }
+      }
+    }
+  }
+
+  result.title = s.trim() || "Event";
+  if (dateFound) {
+    result.date = dateFound;
+    if (startH != null) {
+      result.start = new Date(dateFound.getFullYear(), dateFound.getMonth(), dateFound.getDate(), startH, startM);
+      result.end = new Date(dateFound.getFullYear(), dateFound.getMonth(), dateFound.getDate(), endH != null ? endH : startH + 1, endM);
+    }
+  } else {
+    result.message = "No date found — please set one";
+  }
+  return result;
+}
+
+/* ---------- 7. UI kit ---------- */
+function h(tag, attrs, children) {
+  var el = document.createElement(tag);
+  var k;
+  if (attrs) {
+    for (k in attrs) {
+      if (!attrs.hasOwnProperty(k)) continue;
+      if (k === "style" && typeof attrs[k] === "object") {
+        var sk;
+        for (sk in attrs[k]) if (attrs[k].hasOwnProperty(sk)) el.style[sk] = attrs[k][sk];
+      } else if (k === "className") {
+        el.className = attrs[k];
+      } else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") {
+        el.addEventListener(k.substring(2).toLowerCase(), attrs[k], false);
+      } else if (k === "text") {
+        el.textContent = attrs[k];
+      } else {
+        el.setAttribute(k, attrs[k]);
+      }
+    }
+  }
+  if (children) {
+    if (Object.prototype.toString.call(children) !== "[object Array]") children = [children];
+    var i, c;
+    for (i = 0; i < children.length; i++) {
+      c = children[i];
+      if (c == null) continue;
+      if (typeof c === "string" || typeof c === "number") el.appendChild(document.createTextNode("" + c));
+      else el.appendChild(c);
+    }
+  }
+  return el;
+}
+
+function icon(name) {
+  var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "24");
+  svg.setAttribute("height", "24");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  var paths = {
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
+    tasks: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+    countdown: '<path d="M6 3h12"/><path d="M6 21h12"/><path d="M8 3c0 5 2 7 4 9s4 4 4 9"/><path d="M16 3c0 5-2 7-4 9s-4 4-4 9"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    settings: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/><circle cx="8" cy="7" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/><circle cx="10" cy="17" r="1.5" fill="currentColor"/>',
+    home: '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/>',
+    back: '<path d="M15 6l-6 6 6 6"/>',
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    close: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
+    chev: '<path d="M9 6l6 6-6 6"/>'
+  };
+  svg.innerHTML = paths[name] || "";
+  return svg;
+}
+
+/* ---------- 8. Kernel ---------- */
+var K = {
+  state: "HOME", // AMBIENT | HOME | APP | NIGHT
+  currentApp: null,
+  currentView: null,
+  stack: [],
+  subs: {},
+  lastTouch: Date.now(),
+  transitionLock: false,
+  announced: {},
+  nightWakeUntil: 0,
+  ticker: null,
+  lastMinute: -1,
+  lastDay: ""
+};
+
+K.on = function (name, fn) {
+  if (!K.subs[name]) K.subs[name] = [];
+  K.subs[name].push(fn);
+  return function () {
+    var arr = K.subs[name];
+    if (!arr) return;
+    var i;
+    for (i = 0; i < arr.length; i++) {
+      if (arr[i] === fn) { arr.splice(i, 1); break; }
+    }
+  };
+};
+K.emit = function (name, data) {
+  var arr = K.subs[name];
+  if (!arr) return;
+  var i, copy = arr.slice();
+  for (i = 0; i < copy.length; i++) {
+    try { copy[i](data); } catch (e) {}
+  }
+};
+
+K.go = function (appId, params, fromRect) {
+  if (K.transitionLock) return;
+  var app = null, i;
+  for (i = 0; i < apps.length; i++) if (apps[i].id === appId) { app = apps[i]; break; }
+  if (!app) return;
+
+  K.transitionLock = true;
+  K.lastTouch = Date.now();
+  document.body.classList.add("in-app");
+  document.body.classList.remove("state-home", "state-ambient");
+  document.body.classList.add("state-app");
+
+  var root = document.getElementById("content");
+  var viewEl = h("div", { className: "app-view" });
+  root.appendChild(viewEl);
+
+  var view = app.open(viewEl, params || {}, { destroy: function () {} });
+  K.currentApp = app;
+  K.currentView = view;
+  K.stack = [];
+
+  // origin for zoom
+  if (fromRect) {
+    var cx = fromRect.left + fromRect.width / 2;
+    var cy = fromRect.top + fromRect.height / 2;
+    viewEl.style.webkitTransformOrigin = cx + "px " + cy + "px";
+    viewEl.style.transformOrigin = cx + "px " + cy + "px";
+  }
+
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      viewEl.classList.add("open");
+    });
+  });
+
+  setTimeout(function () {
+    K.transitionLock = false;
+    K.state = "APP";
+  }, TRANS_MS + 20);
+};
+
+K.home = function () {
+  if (K.transitionLock) return;
+  K.transitionLock = true;
+  K.lastTouch = Date.now();
+  closeSheet(true);
+
+  var viewEl = document.querySelector(".app-view");
+  if (viewEl) {
+    viewEl.classList.remove("open");
+    viewEl.classList.add("closing");
+  }
+
+  setTimeout(function () {
+    if (K.currentView && K.currentView.destroy) {
+      try { K.currentView.destroy(); } catch (e) {}
+    }
+    // clear all app views
+    var root = document.getElementById("content");
+    var nodes = root.querySelectorAll(".app-view, .push-view");
+    var i;
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+    }
+    K.currentApp = null;
+    K.currentView = null;
+    K.stack = [];
+    document.body.classList.remove("in-app", "state-app", "state-ambient");
+    document.body.classList.add("state-home");
+    K.state = "HOME";
+    renderHome();
+    K.transitionLock = false;
+  }, TRANS_MS + 20);
+};
+
+K.push = function (builder) {
+  if (K.transitionLock) return;
+  K.transitionLock = true;
+  var root = document.getElementById("content");
+  var el = h("div", { className: "push-view" });
+  root.appendChild(el);
+  var view = builder(el);
+  K.stack.push({ el: el, view: view });
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      el.classList.add("open");
+    });
+  });
+  setTimeout(function () { K.transitionLock = false; }, TRANS_MS + 20);
+};
+
+K.pop = function () {
+  if (K.transitionLock || !K.stack.length) {
+    if (!K.stack.length) K.home();
+    return;
+  }
+  K.transitionLock = true;
+  var top = K.stack.pop();
+  top.el.classList.remove("open");
+  top.el.classList.add("closing");
+  setTimeout(function () {
+    if (top.view && top.view.destroy) try { top.view.destroy(); } catch (e) {}
+    if (top.el.parentNode) top.el.parentNode.removeChild(top.el);
+    K.transitionLock = false;
+  }, TRANS_MS + 20);
+};
+
+function closeSheet(immediate) {
+  var sheet = document.getElementById("sheet");
+  var mask = document.getElementById("sheet-mask");
+  if (!sheet.classList.contains("open") && !immediate) return;
+  sheet.classList.remove("open");
+  mask.classList.remove("open");
+  if (immediate) {
+    document.getElementById("sheet-body").innerHTML = "";
+  } else {
+    setTimeout(function () {
+      document.getElementById("sheet-body").innerHTML = "";
+    }, TRANS_MS);
+  }
+}
+
+K.sheet = function (builder) {
+  var body = document.getElementById("sheet-body");
+  body.innerHTML = "";
+  builder(body);
+  var sheet = document.getElementById("sheet");
+  var mask = document.getElementById("sheet-mask");
+  mask.classList.add("open");
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      sheet.classList.add("open");
+    });
+  });
+};
+
+K.toast = function (spec) {
+  var t = document.getElementById("toast");
+  document.getElementById("toast-title").textContent = spec.title || "";
+  document.getElementById("toast-sub").textContent = spec.sub || "";
+  t.classList.add("show");
+  t.onclick = function () {
+    t.classList.remove("show");
+    if (spec.onTap) spec.onTap();
+  };
+  setTimeout(function () {
+    t.classList.remove("show");
+  }, 15000);
+};
+
+function updateStorageGlyph() {
+  var g = document.getElementById("glyph-storage");
+  g.innerHTML = "";
+  if (!storageOk) {
+    g.textContent = "!";
+    g.style.color = "#B5524A";
+  }
+}
+
+function applyTheme() {
+  var s = store.settings;
+  document.body.classList.remove("theme-dark");
+  if (s.theme === "dark") document.body.classList.add("theme-dark");
+  document.body.classList.remove("text-0", "text-1", "text-2", "text-3");
+  var lvl = s.textScale;
+  if (lvl <= 0.9) document.body.classList.add("text-0");
+  else if (lvl <= 1) document.body.classList.add("text-1");
+  else if (lvl <= 1.15) document.body.classList.add("text-2");
+  else document.body.classList.add("text-3");
+}
+
+function tick() {
+  try {
+    var now = new Date();
+    var h = now.getHours();
+    var mi = now.getMinutes();
+    var sec = now.getSeconds();
+
+    // clocks
+    var tstr = fmtTime(now, store.settings.clock24);
+    document.getElementById("status-time").textContent = tstr;
+    document.getElementById("amb-clock").textContent = tstr;
+    document.getElementById("night-clock").textContent = tstr;
+    document.getElementById("status-date").textContent = fmtFullDate(now);
+    document.getElementById("amb-date").textContent = fmtDate(now);
+
+    // minute event
+    if (mi !== K.lastMinute) {
+      K.lastMinute = mi;
+      K.emit("minute", now);
+      // ambient next line
+      var nev = nextEv(now);
+      var nextEl = document.getElementById("amb-next");
+      if (nev && (nev.s.getTime() - now.getTime()) < 86400000) {
+        nextEl.textContent = "Next: " + nev.e.title + ", " + fmtTime(nev.s, store.settings.clock24);
+      } else {
+        nextEl.textContent = "";
+      }
+    }
+
+    // day event
+    var dayKey = iso(now);
+    if (dayKey !== K.lastDay) {
+      K.lastDay = dayKey;
+      K.emit("day", now);
+      // task reset
+      if (store.tasks.date !== dayKey) {
+        if (store.settings.carryOver) {
+          var kept = [];
+          var ti;
+          for (ti = 0; ti < store.tasks.items.length; ti++) {
+            if (!store.tasks.items[ti].done && store.tasks.items[ti].text) kept.push(store.tasks.items[ti]);
+          }
+          while (kept.length < 3) kept.push({ text: "", done: false });
+          store.tasks.items = kept.slice(0, 3);
+        } else {
+          store.tasks.items = [{ text: "", done: false }, { text: "", done: false }, { text: "", done: false }];
+        }
+        store.tasks.date = dayKey;
+        saveStore();
+        K.emit("data");
+      }
+      K.announced = {};
+    }
+
+    // state machine: night / ambient / idle
+    var nm = store.settings.nightMode;
+    var inNight = false;
+    if (nm && nm.on) {
+      var startP = nm.start.split(":");
+      var endP = nm.end.split(":");
+      var startM = parseInt(startP[0], 10) * 60 + parseInt(startP[1], 10);
+      var endM = parseInt(endP[0], 10) * 60 + parseInt(endP[1], 10);
+      var nowM = h * 60 + mi;
+      if (startM < endM) {
+        inNight = nowM >= startM && nowM < endM;
+      } else {
+        inNight = nowM >= startM || nowM < endM;
+      }
+    }
+
+    if (inNight && Date.now() > K.nightWakeUntil) {
+      if (K.state !== "NIGHT") {
+        document.body.classList.add("state-night");
+        document.body.classList.remove("state-home", "state-ambient", "state-app", "in-app");
+        K.state = "NIGHT";
+        closeSheet(true);
+      }
+    } else {
+      if (K.state === "NIGHT") {
+        document.body.classList.remove("state-night");
+        document.body.classList.add("state-home");
+        K.state = "HOME";
+        renderHome();
+      }
+    }
+
+    // idle return / ambient (only when not in night)
+    if (K.state !== "NIGHT") {
+      var idleMin = (Date.now() - K.lastTouch) / 60000;
+      if (K.state === "APP" || K.state === "HOME") {
+        if (store.settings.idleReturnMinutes > 0 && idleMin >= store.settings.idleReturnMinutes) {
+          if (K.state === "APP") K.home();
+        }
+      }
+      if (K.state === "HOME" && store.settings.ambientMinutes > 0 && idleMin >= store.settings.ambientMinutes) {
+        document.body.classList.remove("state-home");
+        document.body.classList.add("state-ambient");
+        K.state = "AMBIENT";
+      }
+    }
+  } catch (err) {
+    // never let the ticker die
+  }
+}
+
+/* ---------- 9. Apps registry ---------- */
+var apps = [];
+
+function registerApp(def) {
+  apps.push(def);
+}
+
+/* Today widget helpers */
+function renderTodayWidget(el) {
+  el.innerHTML = "";
+  var now = new Date();
+  var list = dayEvs(now);
+  var current = null;
+  var upcoming = [];
+  var i, occ;
+  for (i = 0; i < list.length; i++) {
+    occ = list[i];
+    if (occ.e.allDay) {
+      upcoming.push(occ);
+      continue;
+    }
+    if (occ.s.getTime() <= now.getTime() && occ.en.getTime() > now.getTime()) {
+      current = occ;
+    } else if (occ.s.getTime() > now.getTime()) {
+      upcoming.push(occ);
+    }
+  }
+
+  var body = h("div", { className: "widget-body" });
+  if (current) {
+    body.appendChild(h("div", { className: "now-label", text: "NOW" }));
+    body.appendChild(h("div", { className: "now-title", text: current.e.title }));
+    body.appendChild(h("div", { className: "now-meta", text: fmtTime(current.s, store.settings.clock24) + " – " + fmtTime(current.en, store.settings.clock24) + (current.e.location ? " · " + current.e.location : "") }));
+  } else if (upcoming.length) {
+    var next = upcoming[0];
+    body.appendChild(h("div", { className: "now-label", text: "NEXT UP" }));
+    body.appendChild(h("div", { className: "now-title", text: next.e.title }));
+    body.appendChild(h("div", { className: "now-meta", text: (next.e.allDay ? "All day" : fmtTime(next.s, store.settings.clock24) + " – " + fmtTime(next.en, store.settings.clock24)) + (next.e.location ? " · " + next.e.location : "") }));
+    upcoming = upcoming.slice(1);
+  } else {
+    body.appendChild(h("div", { className: "empty", text: "A clear day." }));
+  }
+
+  var shown = 0;
+  for (i = 0; i < upcoming.length && shown < 4; i++) {
+    occ = upcoming[i];
+    var row = h("div", { className: "list-row" });
+    row.appendChild(h("div", { className: "list-time", text: occ.e.allDay ? "All day" : fmtTime(occ.s, store.settings.clock24) }));
+    row.appendChild(h("div", { text: occ.e.title }));
+    body.appendChild(row);
+    shown++;
+  }
+  el.appendChild(body);
+}
+
+function renderMonthWidget(el) {
+  el.innerHTML = "";
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = now.getMonth();
+  el.appendChild(h("div", { className: "month-name", text: MONTHS[m] + " " + y }));
+
+  var weekStart = store.settings.weekStartsMonday ? 1 : 0;
+  var wd = h("div", { className: "weekdays" });
+  var i;
+  for (i = 0; i < 7; i++) {
+    var di = (weekStart + i) % 7;
+    wd.appendChild(h("span", { text: DAYS_LETTER[di] }));
+  }
+  el.appendChild(wd);
+
+  var first = new Date(y, m, 1);
+  var startOffset = (first.getDay() - weekStart + 7) % 7;
+  var gridStart = addDays(first, -startOffset);
+  var grid = h("div", { className: "grid" });
+  for (i = 0; i < 42; i++) {
+    var d = addDays(gridStart, i);
+    var cell = h("div", { className: "day" + (d.getMonth() !== m ? " other" : "") + (sameDay(d, now) ? " today" : "") });
+    cell.appendChild(h("span", { className: "num", text: "" + d.getDate() }));
+    var cnt = busyCount(d);
+    if (cnt > 0) {
+      var dots = h("div", { className: "dots" });
+      var max = Math.min(cnt, 3);
+      var j;
+      for (j = 0; j < max; j++) dots.appendChild(h("div", { className: "dot" }));
+      cell.appendChild(dots);
+    }
+    grid.appendChild(cell);
+  }
+  el.appendChild(grid);
+}
+
+function renderCountdownWidget(el) {
+  el.innerHTML = "";
+  var now = new Date();
+  var best = null;
+  var bestDays = 99999;
+  var i, c, d, days;
+  for (i = 0; i < store.countdowns.length; i++) {
+    c = store.countdowns[i];
+    d = parseLocalISO(c.date + (c.time ? "T" + c.time : ""));
+    if (!d || d.getTime() < sod(now).getTime()) continue;
+    days = daysBetween(now, d);
+    if (days < bestDays) {
+      bestDays = days;
+      best = c;
+    }
+  }
+  if (!best) {
+    el.appendChild(h("div", { className: "empty", text: "No countdowns" }));
+    return;
+  }
+  var label = bestDays === 0 ? "TODAY" : ("" + bestDays);
+  el.appendChild(h("div", { className: "days", text: label }));
+  el.appendChild(h("div", { className: "name", text: best.name }));
+  el.appendChild(h("div", { className: "date", text: fmtDate(parseLocalISO(best.date)) }));
+}
+
+function renderTasksWidget(el) {
+  el.innerHTML = "";
+  var body = h("div", { className: "widget-body" });
+  var items = store.tasks.items;
+  var allDone = true;
+  var i, hasText = false;
+  for (i = 0; i < items.length; i++) {
+    if (items[i].text) {
+      hasText = true;
+      if (!items[i].done) allDone = false;
+    }
+  }
+  if (!hasText) {
+    body.appendChild(h("div", { className: "all-done", text: "No tasks" }));
+    el.appendChild(body);
+    return;
+  }
+  if (allDone) {
+    body.appendChild(h("div", { className: "all-done", text: "All done" }));
+    el.appendChild(body);
+    return;
+  }
+  for (i = 0; i < items.length; i++) {
+    (function (idx) {
+      var it = items[idx];
+      if (!it.text) return;
+      var row = h("div", { className: "task-row" });
+      var chk = h("div", { className: "check" + (it.done ? " done" : "") });
+      if (it.done) chk.appendChild(icon("tasks"));
+      chk.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        store.tasks.items[idx].done = !store.tasks.items[idx].done;
+        saveStore();
+        K.emit("data");
+      }, false);
+      row.appendChild(chk);
+      row.appendChild(h("div", { className: "task-text" + (it.done ? " done" : ""), text: it.text }));
+      body.appendChild(row);
+    })(i);
+  }
+  el.appendChild(body);
+}
+
+function renderHome() {
+  var home = document.getElementById("home");
+  home.innerHTML = "";
+
+  // Today
+  var wt = h("div", { id: "w-today", className: "widget" });
+  wt.appendChild(h("div", { className: "widget-title", text: "Today" }));
+  var wtBody = h("div");
+  wt.appendChild(wtBody);
+  renderTodayWidget(wtBody);
+  wt.addEventListener("click", function (ev) {
+    if (ev.target.closest && ev.target.closest(".check")) return;
+    var r = wt.getBoundingClientRect();
+    K.go("calendar", {}, r);
+  }, false);
+  home.appendChild(wt);
+
+  // Month
+  var wm = h("div", { id: "w-month", className: "widget" });
+  renderMonthWidget(wm);
+  wm.addEventListener("click", function () {
+    var r = wm.getBoundingClientRect();
+    K.go("calendar", { view: "month" }, r);
+  }, false);
+  home.appendChild(wm);
+
+  // Countdown
+  var wc = h("div", { id: "w-countdown", className: "widget" });
+  renderCountdownWidget(wc);
+  wc.addEventListener("click", function () {
+    var r = wc.getBoundingClientRect();
+    K.go("countdowns", {}, r);
+  }, false);
+  home.appendChild(wc);
+
+  // Tasks
+  var wtk = h("div", { id: "w-tasks", className: "widget" });
+  wtk.appendChild(h("div", { className: "widget-title", text: "Tasks" }));
+  var wtkBody = h("div");
+  wtk.appendChild(wtkBody);
+  renderTasksWidget(wtkBody);
+  wtk.addEventListener("click", function (ev) {
+    if (ev.target.closest && ev.target.closest(".check")) return;
+    var r = wtk.getBoundingClientRect();
+    K.go("tasks", {}, r);
+  }, false);
+  home.appendChild(wtk);
+}
+
+/* Calendar app */
+registerApp({
+  id: "calendar",
+  name: "Calendar",
+  icon: function () { return icon("calendar"); },
+  open: function (root, params, ctx) {
+    var state = { mode: params.view === "day" ? "day" : "month", cursor: params.date ? parseLocalISO(params.date) : sod(new Date()), unsubs: [] };
+
+    function destroy() {
+      var i;
+      for (i = 0; i < state.unsubs.length; i++) state.unsubs[i]();
+      state.unsubs = [];
+    }
+
+    function build() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { K.home(); }, false);
+      header.appendChild(back);
+
+      var title = h("div", { className: "title", text: state.mode === "month" ? MONTHS[state.cursor.getMonth()] + " " + state.cursor.getFullYear() : fmtDate(state.cursor) });
+      header.appendChild(title);
+
+      var actions = h("div", { className: "actions" });
+      if (state.mode === "month") {
+        var prev = h("button", { className: "btn", text: "‹" });
+        prev.addEventListener("click", function () {
+          state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() - 1, 1);
+          build();
+        }, false);
+        var next = h("button", { className: "btn", text: "›" });
+        next.addEventListener("click", function () {
+          state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + 1, 1);
+          build();
+        }, false);
+        var todayBtn = h("button", { className: "btn", text: "Today" });
+        todayBtn.addEventListener("click", function () {
+          state.cursor = sod(new Date());
+          build();
+        }, false);
+        actions.appendChild(prev);
+        actions.appendChild(next);
+        actions.appendChild(todayBtn);
+      }
+      var seg = h("div", { className: "cal-seg" });
+      var bMonth = h("button", { className: state.mode === "month" ? "active" : "", text: "Month" });
+      var bDay = h("button", { className: state.mode === "day" ? "active" : "", text: "Day" });
+      bMonth.addEventListener("click", function () { state.mode = "month"; build(); }, false);
+      bDay.addEventListener("click", function () { state.mode = "day"; build(); }, false);
+      seg.appendChild(bMonth);
+      seg.appendChild(bDay);
+      actions.appendChild(seg);
+
+      var addBtn = h("button", { className: "btn primary" });
+      addBtn.appendChild(icon("plus"));
+      addBtn.addEventListener("click", function () {
+        openEventEditor(null, state.cursor);
+      }, false);
+      actions.appendChild(addBtn);
+      header.appendChild(actions);
+      root.appendChild(header);
+
+      var body = h("div", { className: "app-body" });
+      root.appendChild(body);
+
+      if (state.mode === "month") renderMonthView(body);
+      else renderDayView(body);
+    }
+
+    function renderMonthView(body) {
+      body.innerHTML = "";
+      var scroll = h("div", { className: "app-scroll scroll" });
+      var y = state.cursor.getFullYear();
+      var m = state.cursor.getMonth();
+      var weekStart = store.settings.weekStartsMonday ? 1 : 0;
+
+      var wd = h("div", { className: "weekdays", style: { padding: "8px 12px", display: "-webkit-flex", display: "flex" } });
+      var i;
+      for (i = 0; i < 7; i++) {
+        var di = (weekStart + i) % 7;
+        wd.appendChild(h("span", { style: { flex: "1", textAlign: "center", fontSize: "14px", color: "var(--muted)" }, text: DAYS_LETTER[di] }));
+      }
+      scroll.appendChild(wd);
+
+      var first = new Date(y, m, 1);
+      var startOffset = (first.getDay() - weekStart + 7) % 7;
+      var gridStart = addDays(first, -startOffset);
+      var grid = h("div", { className: "month-grid-full" });
+      var now = new Date();
+      for (i = 0; i < 42; i++) {
+        (function (d) {
+          var cell = h("div", { className: "cell" + (d.getMonth() !== m ? " other" : "") + (sameDay(d, now) ? " today" : "") });
+          cell.appendChild(h("div", { className: "num", text: "" + d.getDate() }));
+          var list = dayEvs(d);
+          if (list.length) {
+            var dots = h("div", { className: "dots" });
+            var max = Math.min(list.length, 3);
+            var j;
+            for (j = 0; j < max; j++) {
+              var dot = h("div", { className: "dot" });
+              dot.style.background = catColor(list[j].e.category);
+              dots.appendChild(dot);
+            }
+            if (list.length > 3) dots.appendChild(h("span", { className: "more", text: "+" }));
+            cell.appendChild(dots);
+          }
+          cell.addEventListener("click", function () {
+            state.mode = "day";
+            state.cursor = d;
+            build();
+          }, false);
+          grid.appendChild(cell);
+        })(addDays(gridStart, i));
+      }
+      scroll.appendChild(grid);
+      body.appendChild(scroll);
+
+      // swipe month
+      var startX = 0, startY = 0;
+      scroll.addEventListener("touchstart", function (ev) {
+        if (ev.touches.length === 1) {
+          startX = ev.touches[0].clientX;
+          startY = ev.touches[0].clientY;
+        }
+      }, false);
+      scroll.addEventListener("touchend", function (ev) {
+        if (!ev.changedTouches.length) return;
+        var dx = ev.changedTouches[0].clientX - startX;
+        var dy = ev.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) state.cursor = new Date(y, m + 1, 1);
+          else state.cursor = new Date(y, m - 1, 1);
+          build();
+        }
+      }, false);
+    }
+
+    function renderDayView(body) {
+      body.innerHTML = "";
+      var list = dayEvs(state.cursor);
+      var allDay = [];
+      var timed = [];
+      var i;
+      for (i = 0; i < list.length; i++) {
+        if (list[i].e.allDay) allDay.push(list[i]);
+        else timed.push(list[i]);
+      }
+
+      var allEl = h("div", { className: "day-allday" });
+      for (i = 0; i < allDay.length; i++) {
+        (function (occ) {
+          var pill = h("div", { className: "pill", text: occ.e.title });
+          pill.style.background = catColor(occ.e.category);
+          pill.addEventListener("click", function () { openEventDetail(occ.e); }, false);
+          allEl.appendChild(pill);
+        })(allDay[i]);
+      }
+      body.appendChild(allEl);
+
+      var scroll = h("div", { className: "app-scroll scroll" });
+      var timeline = h("div", { className: "day-timeline" });
+      var hours = DAY_END - DAY_START;
+      timeline.style.height = (hours * HOUR_H) + "px";
+
+      for (i = 0; i <= hours; i++) {
+        var top = i * HOUR_H;
+        var line = h("div", { className: "hour-line", style: { top: top + "px" } });
+        timeline.appendChild(line);
+        var lab = h("div", { className: "hour-label", style: { top: top + "px" }, text: pad(DAY_START + i) + ":00" });
+        timeline.appendChild(lab);
+      }
+
+      // layout timed events (simple columns)
+      var columns = [];
+      for (i = 0; i < timed.length; i++) {
+        var occ = timed[i];
+        var startM = (occ.s.getHours() - DAY_START) * 60 + occ.s.getMinutes();
+        var endM = (occ.en.getHours() - DAY_START) * 60 + occ.en.getMinutes();
+        if (endM <= startM) endM = startM + 30;
+        var top = Math.max(0, startM / 60 * HOUR_H);
+        var height = Math.max(36, (endM - startM) / 60 * HOUR_H);
+
+        // find column
+        var col = 0;
+        var placed = false;
+        while (!placed) {
+          if (!columns[col]) columns[col] = [];
+          var ok = true;
+          var j;
+          for (j = 0; j < columns[col].length; j++) {
+            var other = columns[col][j];
+            if (!(endM <= other.startM || startM >= other.endM)) { ok = false; break; }
+          }
+          if (ok) {
+            columns[col].push({ startM: startM, endM: endM });
+            placed = true;
+          } else col++;
+        }
+        var colCount = Math.max(columns.length, 1);
+        var widthPct = 100 / colCount;
+        var leftPct = col * widthPct;
+
+        (function (occ, top, height, leftPct, widthPct) {
+          var block = h("div", { className: "ev-block" });
+          block.style.top = top + "px";
+          block.style.height = height + "px";
+          block.style.left = "calc(" + leftPct + "% + 2px)";
+          block.style.width = "calc(" + widthPct + "% - 4px)";
+          block.style.background = catColor(occ.e.category);
+          block.appendChild(h("div", { className: "t", text: occ.e.title }));
+          block.appendChild(h("div", { style: { fontSize: "14px", opacity: "0.9" }, text: fmtTime(occ.s, store.settings.clock24) }));
+
+          var pressTimer = null;
+          var startX, startY;
+          block.addEventListener("touchstart", function (ev) {
+            if (ev.touches.length !== 1) return;
+            startX = ev.touches[0].clientX;
+            startY = ev.touches[0].clientY;
+            block.style.webkitTransform = "scale(0.97)";
+            block.style.transform = "scale(0.97)";
+            pressTimer = setTimeout(function () {
+              pressTimer = null;
+              block.style.webkitTransform = "";
+              block.style.transform = "";
+              openEventActions(occ.e);
+            }, LONG_PRESS_MS);
+          }, false);
+          block.addEventListener("touchmove", function (ev) {
+            if (!pressTimer) return;
+            var dx = ev.touches[0].clientX - startX;
+            var dy = ev.touches[0].clientY - startY;
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+              clearTimeout(pressTimer);
+              pressTimer = null;
+              block.style.webkitTransform = "";
+              block.style.transform = "";
+            }
+          }, false);
+          block.addEventListener("touchend", function () {
+            if (pressTimer) {
+              clearTimeout(pressTimer);
+              pressTimer = null;
+              block.style.webkitTransform = "";
+              block.style.transform = "";
+              openEventDetail(occ.e);
+            }
+          }, false);
+          block.addEventListener("touchcancel", function () {
+            if (pressTimer) clearTimeout(pressTimer);
+            pressTimer = null;
+            block.style.webkitTransform = "";
+            block.style.transform = "";
+          }, false);
+
+          timeline.appendChild(block);
+        })(occ, top, height, leftPct, widthPct);
+      }
+
+      // now line
+      if (sameDay(state.cursor, new Date())) {
+        var now = new Date();
+        var nowM = (now.getHours() - DAY_START) * 60 + now.getMinutes();
+        if (nowM >= 0 && nowM <= hours * 60) {
+          var nowTop = nowM / 60 * HOUR_H;
+          var nowLine = h("div", { className: "now-line", style: { top: nowTop + "px" } });
+          nowLine.appendChild(h("div", { className: "now-dot" }));
+          timeline.appendChild(nowLine);
+          // auto scroll
+          setTimeout(function () {
+            scroll.scrollTop = Math.max(0, nowTop - scroll.clientHeight / 3);
+          }, 50);
+        }
+      }
+
+      scroll.appendChild(timeline);
+      body.appendChild(scroll);
+
+      state.unsubs.push(K.on("minute", function () {
+        if (state.mode === "day" && sameDay(state.cursor, new Date())) {
+          // rebuild now line only would be nicer, but simple rebuild is ok for Phase 1
+        }
+      }));
+    }
+
+    function openEventDetail(ev) {
+      K.sheet(function (body) {
+        body.appendChild(h("div", { className: "sheet-title", text: ev.title }));
+        body.appendChild(h("div", { style: { fontSize: "22px", marginBottom: "8px" }, text: (ev.allDay ? "All day" : fmtTime(parseLocalISO(ev.start), store.settings.clock24) + " – " + fmtTime(parseLocalISO(ev.end), store.settings.clock24)) }));
+        if (ev.location) body.appendChild(h("div", { style: { fontSize: "20px", color: "var(--muted)", marginBottom: "8px" }, text: ev.location }));
+        if (ev.notes) body.appendChild(h("div", { style: { fontSize: "20px", marginTop: "12px" }, text: ev.notes }));
+        var actions = h("div", { className: "sheet-actions" });
+        var edit = h("button", { className: "btn", text: "Edit" });
+        edit.addEventListener("click", function () { closeSheet(); openEventEditor(ev); }, false);
+        var del = h("button", { className: "btn danger", text: "Delete" });
+        del.addEventListener("click", function () {
+          var ni;
+          for (ni = 0; ni < store.events.length; ni++) {
+            if (store.events[ni].id === ev.id) {
+              store.events.splice(ni, 1);
+              break;
+            }
+          }
+          saveStore();
+          K.emit("data");
+          closeSheet();
+          build();
+        }, false);
+        actions.appendChild(edit);
+        actions.appendChild(del);
+        body.appendChild(actions);
+      });
+    }
+
+    function openEventActions(ev) {
+      K.sheet(function (body) {
+        body.appendChild(h("div", { className: "sheet-title", text: ev.title }));
+        var actions = h("div", { className: "sheet-actions", style: { flexDirection: "column", alignItems: "stretch" } });
+        var edit = h("button", { className: "btn", text: "Edit", style: { margin: "6px 0" } });
+        edit.addEventListener("click", function () { closeSheet(); openEventEditor(ev); }, false);
+        var del = h("button", { className: "btn danger", text: "Delete", style: { margin: "6px 0" } });
+        del.addEventListener("click", function () {
+          var ni;
+          for (ni = 0; ni < store.events.length; ni++) {
+            if (store.events[ni].id === ev.id) {
+              store.events.splice(ni, 1);
+              break;
+            }
+          }
+          saveStore();
+          K.emit("data");
+          closeSheet();
+          build();
+        }, false);
+        actions.appendChild(edit);
+        actions.appendChild(del);
+        body.appendChild(actions);
+      });
+    }
+
+    function openEventEditor(ev, preDate) {
+      var isNew = !ev;
+      var draft = ev ? {
+        id: ev.id,
+        title: ev.title,
+        start: ev.start,
+        end: ev.end,
+        allDay: ev.allDay,
+        category: ev.category,
+        notes: ev.notes || "",
+        location: ev.location || "",
+        calendarId: ev.calendarId || "local",
+        repeat: ev.repeat
+      } : {
+        id: uid(),
+        title: "",
+        start: iso(preDate || sod(new Date())) + "T09:00",
+        end: iso(preDate || sod(new Date())) + "T10:00",
+        allDay: false,
+        category: "school",
+        notes: "",
+        location: "",
+        calendarId: "local",
+        repeat: null
+      };
+
+      K.sheet(function (body) {
+        body.appendChild(h("div", { className: "sheet-title", text: isNew ? "New event" : "Edit event" }));
+
+        // quick add
+        var qa = h("div", { className: "field" });
+        qa.appendChild(h("label", { text: "Quick add" }));
+        var qaInput = h("input", { type: "text", placeholder: "e.g. Legal exam Fri 9am" });
+        qa.appendChild(qaInput);
+        var qaMsg = h("div", { className: "inline-msg" });
+        qa.appendChild(qaMsg);
+        body.appendChild(qa);
+
+        var titleF = h("div", { className: "field" });
+        titleF.appendChild(h("label", { text: "Title" }));
+        var titleIn = h("input", { type: "text", value: draft.title });
+        titleF.appendChild(titleIn);
+        body.appendChild(titleF);
+
+        var dateF = h("div", { className: "field" });
+        dateF.appendChild(h("label", { text: "Date" }));
+        var dateIn = h("input", { type: "date", value: draft.start.substring(0, 10) });
+        dateF.appendChild(dateIn);
+        var dateManual = h("input", { type: "text", placeholder: "D/M/YYYY fallback", style: { marginTop: "8px" } });
+        dateF.appendChild(dateManual);
+        body.appendChild(dateF);
+
+        var startF = h("div", { className: "field" });
+        startF.appendChild(h("label", { text: "Start" }));
+        var startIn = h("input", { type: "time", value: draft.start.substring(11, 16) || "09:00" });
+        startF.appendChild(startIn);
+        body.appendChild(startF);
+
+        var endF = h("div", { className: "field" });
+        endF.appendChild(h("label", { text: "End" }));
+        var endIn = h("input", { type: "time", value: draft.end.substring(11, 16) || "10:00" });
+        endF.appendChild(endIn);
+        var timeMsg = h("div", { className: "inline-msg" });
+        endF.appendChild(timeMsg);
+        body.appendChild(endF);
+
+        var allF = h("div", { className: "field" });
+        var allLabel = h("label", { text: "All-day" });
+        var allChk = h("input", { type: "checkbox" });
+        allChk.checked = !!draft.allDay;
+        allF.appendChild(allLabel);
+        allF.appendChild(allChk);
+        body.appendChild(allF);
+
+        var catF = h("div", { className: "field" });
+        catF.appendChild(h("label", { text: "Category" }));
+        var chips = h("div", { className: "chips" });
+        var ci;
+        for (ci = 0; ci < store.categories.length; ci++) {
+          (function (cat) {
+            var chip = h("button", { className: "chip" + (draft.category === cat.id ? " active" : ""), text: cat.name });
+            chip.addEventListener("click", function () {
+              draft.category = cat.id;
+              var ch = chips.querySelectorAll(".chip");
+              var j;
+              for (j = 0; j < ch.length; j++) ch[j].classList.remove("active");
+              chip.classList.add("active");
+            }, false);
+            chips.appendChild(chip);
+          })(store.categories[ci]);
+        }
+        catF.appendChild(chips);
+        body.appendChild(catF);
+
+        var locF = h("div", { className: "field" });
+        locF.appendChild(h("label", { text: "Location" }));
+        var locIn = h("input", { type: "text", value: draft.location });
+        locF.appendChild(locIn);
+        body.appendChild(locF);
+
+        var notesF = h("div", { className: "field" });
+        notesF.appendChild(h("label", { text: "Notes" }));
+        var notesIn = h("textarea", { text: draft.notes });
+        notesF.appendChild(notesIn);
+        body.appendChild(notesF);
+
+        // keyboard spacer for iOS
+        var spacer = h("div", { style: { height: "0px" } });
+        body.appendChild(spacer);
+        function onFocus() {
+          spacer.style.height = "340px";
+          setTimeout(function () {
+            try { titleIn.scrollIntoView({ block: "center" }); } catch (e) {}
+          }, 300);
+        }
+        function onBlur() { spacer.style.height = "0px"; }
+        var inputs = body.querySelectorAll("input, textarea");
+        for (var ii = 0; ii < inputs.length; ii++) {
+          inputs[ii].addEventListener("focus", onFocus, false);
+          inputs[ii].addEventListener("blur", onBlur, false);
+        }
+
+        qaInput.addEventListener("change", function () {
+          var parsed = parseQuickAdd(qaInput.value);
+          if (parsed.title) titleIn.value = parsed.title;
+          if (parsed.date) {
+            dateIn.value = iso(parsed.date);
+            if (parsed.start) {
+              startIn.value = pad(parsed.start.getHours()) + ":" + pad(parsed.start.getMinutes());
+              endIn.value = pad(parsed.end.getHours()) + ":" + pad(parsed.end.getMinutes());
+            }
+          }
+          qaMsg.textContent = parsed.message || "";
+        }, false);
+
+        var actions = h("div", { className: "sheet-actions" });
+        var cancel = h("button", { className: "btn", text: "Cancel" });
+        cancel.addEventListener("click", function () { closeSheet(); }, false);
+        var save = h("button", { className: "btn primary", text: "Save" });
+        save.addEventListener("click", function () {
+          var title = titleIn.value.replace(/^\s+|\s+$/g, "");
+          if (!title) { qaMsg.textContent = "Title required"; return; }
+          var dateStr = dateManual.value.replace(/^\s+|\s+$/g, "") || dateIn.value;
+          if (dateManual.value) {
+            var dm = dateManual.value.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+            if (dm) {
+              var yy = parseInt(dm[3], 10);
+              if (yy < 100) yy += 2000;
+              dateStr = yy + "-" + pad(parseInt(dm[2], 10)) + "-" + pad(parseInt(dm[1], 10));
+            }
+          }
+          if (!dateStr) { qaMsg.textContent = "Date required"; return; }
+          var allDay = allChk.checked;
+          var startStr, endStr;
+          if (allDay) {
+            startStr = dateStr + "T00:00";
+            endStr = dateStr + "T23:59";
+          } else {
+            startStr = dateStr + "T" + (startIn.value || "09:00");
+            endStr = dateStr + "T" + (endIn.value || "10:00");
+            var sD = parseLocalISO(startStr);
+            var eD = parseLocalISO(endStr);
+            if (eD.getTime() <= sD.getTime()) {
+              timeMsg.textContent = "End must be after start";
+              return;
+            }
+          }
+          draft.title = title;
+          draft.start = startStr;
+          draft.end = endStr;
+          draft.allDay = allDay;
+          draft.location = locIn.value;
+          draft.notes = notesIn.value;
+
+          if (isNew) {
+            store.events.push(draft);
+          } else {
+            var ni;
+            for (ni = 0; ni < store.events.length; ni++) {
+              if (store.events[ni].id === draft.id) {
+                store.events[ni] = draft;
+                break;
+              }
+            }
+          }
+          saveStore();
+          K.emit("data");
+          closeSheet();
+          build();
+        }, false);
+        actions.appendChild(cancel);
+        if (!isNew) {
+          var del = h("button", { className: "btn danger", text: "Delete" });
+          del.addEventListener("click", function () {
+            var ni;
+            for (ni = 0; ni < store.events.length; ni++) {
+              if (store.events[ni].id === draft.id) {
+                store.events.splice(ni, 1);
+                break;
+              }
+            }
+            saveStore();
+            K.emit("data");
+            closeSheet();
+            build();
+          }, false);
+          actions.appendChild(del);
+        }
+        actions.appendChild(save);
+        body.appendChild(actions);
+      });
+    }
+
+    state.unsubs.push(K.on("data", function () { build(); }));
+    state.unsubs.push(K.on("day", function () { build(); }));
+    build();
+    return { destroy: destroy };
+  }
+});
+
+/* Tasks app (Phase 1 minimal) */
+registerApp({
+  id: "tasks",
+  name: "Tasks",
+  icon: function () { return icon("tasks"); },
+  open: function (root, params, ctx) {
+    function build() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { K.home(); }, false);
+      header.appendChild(back);
+      header.appendChild(h("div", { className: "title", text: "Tasks" }));
+      root.appendChild(header);
+
+      var body = h("div", { className: "app-body" });
+      var scroll = h("div", { className: "app-scroll scroll" });
+      var items = store.tasks.items;
+      var i;
+      for (i = 0; i < 3; i++) {
+        (function (idx) {
+          var it = items[idx] || { text: "", done: false };
+          var row = h("div", { style: { display: "-webkit-flex", display: "flex", alignItems: "center", minHeight: "72px", padding: "12px 0", borderBottom: "1px solid var(--line)" } });
+          var chk = h("div", { className: "check" + (it.done ? " done" : ""), style: { width: "44px", height: "44px", borderRadius: "50%", border: "1.5px solid var(--line)", marginRight: "16px", display: "-webkit-flex", display: "flex", alignItems: "center", justifyContent: "center" } });
+          if (it.done) chk.appendChild(icon("tasks"));
+          chk.addEventListener("click", function () {
+            store.tasks.items[idx].done = !store.tasks.items[idx].done;
+            saveStore();
+            K.emit("data");
+            build();
+          }, false);
+          row.appendChild(chk);
+          var txt = h("div", { style: { fontSize: "36px", flex: "1", textDecoration: it.done ? "line-through" : "none", color: it.done ? "var(--muted)" : "var(--ink)" }, text: it.text || "Tap to add" });
+          txt.addEventListener("click", function () {
+            K.sheet(function (b) {
+              b.appendChild(h("div", { className: "sheet-title", text: "Task" }));
+              var inp = h("input", { type: "text", value: it.text || "" });
+              b.appendChild(inp);
+              var actions = h("div", { className: "sheet-actions" });
+              var cancel = h("button", { className: "btn", text: "Cancel" });
+              cancel.addEventListener("click", function () { closeSheet(); }, false);
+              var save = h("button", { className: "btn primary", text: "Save" });
+              save.addEventListener("click", function () {
+                store.tasks.items[idx].text = inp.value.replace(/^\s+|\s+$/g, "");
+                saveStore();
+                K.emit("data");
+                closeSheet();
+                build();
+              }, false);
+              actions.appendChild(cancel);
+              actions.appendChild(save);
+              b.appendChild(actions);
+              setTimeout(function () { try { inp.focus(); } catch (e) {} }, 300);
+            });
+          }, false);
+          row.appendChild(txt);
+          scroll.appendChild(row);
+        })(i);
+      }
+      body.appendChild(scroll);
+      root.appendChild(body);
+    }
+    var unsub = K.on("data", build);
+    build();
+    return { destroy: function () { unsub(); } };
+  }
+});
+
+/* Countdowns app (Phase 1 minimal) */
+registerApp({
+  id: "countdowns",
+  name: "Countdowns",
+  icon: function () { return icon("countdown"); },
+  open: function (root, params, ctx) {
+    function build() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { K.home(); }, false);
+      header.appendChild(back);
+      header.appendChild(h("div", { className: "title", text: "Countdowns" }));
+      var add = h("button", { className: "btn primary" });
+      add.appendChild(icon("plus"));
+      add.addEventListener("click", function () { editCountdown(null); }, false);
+      header.appendChild(h("div", { className: "actions" }, add));
+      root.appendChild(header);
+
+      var body = h("div", { className: "app-body" });
+      var scroll = h("div", { className: "app-scroll scroll" });
+      var now = new Date();
+      var list = [];
+      var i, c, d, days;
+      for (i = 0; i < store.countdowns.length; i++) {
+        c = store.countdowns[i];
+        d = parseLocalISO(c.date);
+        if (!d || d.getTime() < sod(now).getTime()) continue;
+        days = daysBetween(now, d);
+        list.push({ c: c, days: days });
+      }
+      list.sort(function (a, b) { return a.days - b.days; });
+      for (i = 0; i < list.length; i++) {
+        (function (item) {
+          var row = h("div", { style: { display: "-webkit-flex", display: "flex", alignItems: "center", padding: "16px 0", borderBottom: "1px solid var(--line)", minHeight: "88px" } });
+          var daysEl = h("div", { style: { fontFamily: "Didot, Georgia, serif", fontSize: "80px", width: "140px", lineHeight: "1" }, text: item.days === 0 ? "0" : ("" + item.days) });
+          row.appendChild(daysEl);
+          var info = h("div", { style: { flex: "1" } });
+          info.appendChild(h("div", { style: { fontSize: "28px" }, text: item.c.name }));
+          info.appendChild(h("div", { style: { fontSize: "18px", color: "var(--muted)" }, text: fmtDate(parseLocalISO(item.c.date)) }));
+          row.appendChild(info);
+          row.addEventListener("click", function () { editCountdown(item.c); }, false);
+          scroll.appendChild(row);
+        })(list[i]);
+      }
+      if (!list.length) {
+        scroll.appendChild(h("div", { style: { fontSize: "24px", color: "var(--muted)", paddingTop: "40px" }, text: "No upcoming countdowns" }));
+      }
+      body.appendChild(scroll);
+      root.appendChild(body);
+    }
+    function editCountdown(c) {
+      var isNew = !c;
+      var draft = c ? { id: c.id, name: c.name, date: c.date, time: c.time || "" } : { id: uid(), name: "", date: iso(addDays(new Date(), 7)), time: "" };
+      K.sheet(function (body) {
+        body.appendChild(h("div", { className: "sheet-title", text: isNew ? "Add countdown" : "Edit countdown" }));
+        var nameF = h("div", { className: "field" });
+        nameF.appendChild(h("label", { text: "Name" }));
+        var nameIn = h("input", { type: "text", value: draft.name });
+        nameF.appendChild(nameIn);
+        body.appendChild(nameF);
+        var dateF = h("div", { className: "field" });
+        dateF.appendChild(h("label", { text: "Date" }));
+        var dateIn = h("input", { type: "date", value: draft.date });
+        dateF.appendChild(dateIn);
+        body.appendChild(dateF);
+        var actions = h("div", { className: "sheet-actions" });
+        var cancel = h("button", { className: "btn", text: "Cancel" });
+        cancel.addEventListener("click", function () { closeSheet(); }, false);
+        var save = h("button", { className: "btn primary", text: "Save" });
+        save.addEventListener("click", function () {
+          draft.name = nameIn.value.replace(/^\s+|\s+$/g, "") || "Countdown";
+          draft.date = dateIn.value;
+          if (isNew) store.countdowns.push(draft);
+          else {
+            var ni;
+            for (ni = 0; ni < store.countdowns.length; ni++) {
+              if (store.countdowns[ni].id === draft.id) { store.countdowns[ni] = draft; break; }
+            }
+          }
+          saveStore();
+          K.emit("data");
+          closeSheet();
+          build();
+        }, false);
+        actions.appendChild(cancel);
+        if (!isNew) {
+          var del = h("button", { className: "btn danger", text: "Delete" });
+          del.addEventListener("click", function () {
+            var ni;
+            for (ni = 0; ni < store.countdowns.length; ni++) {
+              if (store.countdowns[ni].id === draft.id) { store.countdowns.splice(ni, 1); break; }
+            }
+            saveStore();
+            K.emit("data");
+            closeSheet();
+            build();
+          }, false);
+          actions.appendChild(del);
+        }
+        actions.appendChild(save);
+        body.appendChild(actions);
+      });
+    }
+    var unsub = K.on("data", build);
+    build();
+    return { destroy: function () { unsub(); } };
+  }
+});
+
+/* Clock app (Phase 1) */
+registerApp({
+  id: "clock",
+  name: "Clock",
+  icon: function () { return icon("clock"); },
+  open: function (root, params, ctx) {
+    root.innerHTML = "";
+    var header = h("div", { className: "app-header" });
+    var back = h("button", { className: "back" });
+    back.appendChild(icon("back"));
+    back.addEventListener("click", function () { K.home(); }, false);
+    header.appendChild(back);
+    header.appendChild(h("div", { className: "title", text: "Clock" }));
+    root.appendChild(header);
+    var body = h("div", { className: "app-body", style: { display: "-webkit-flex", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" } });
+    var clockEl = h("div", { style: { fontFamily: "Didot, Georgia, serif", fontSize: "160px", lineHeight: "1" } });
+    var dateEl = h("div", { style: { fontFamily: "Didot, Georgia, serif", fontSize: "36px", color: "var(--muted)", marginTop: "12px" } });
+    body.appendChild(clockEl);
+    body.appendChild(dateEl);
+    root.appendChild(body);
+    function upd(now) {
+      clockEl.textContent = fmtTime(now || new Date(), store.settings.clock24);
+      dateEl.textContent = fmtDate(now || new Date());
+    }
+    upd();
+    var unsub = K.on("minute", upd);
+    return { destroy: function () { unsub(); } };
+  }
+});
+
+/* Settings app (Display + Data only for Phase 1) */
+registerApp({
+  id: "settings",
+  name: "Settings",
+  icon: function () { return icon("settings"); },
+  open: function (root, params, ctx) {
+    var unsubs = [];
+    function destroy() {
+      var i;
+      for (i = 0; i < unsubs.length; i++) unsubs[i]();
+    }
+    function showRoot() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { K.home(); }, false);
+      header.appendChild(back);
+      header.appendChild(h("div", { className: "title", text: "Settings" }));
+      root.appendChild(header);
+      var body = h("div", { className: "app-body" });
+      var scroll = h("div", { className: "app-scroll scroll settings-list" });
+
+      function row(label, val, onTap) {
+        var r = h("div", { className: "settings-row" });
+        r.appendChild(h("span", { text: label }));
+        if (val) r.appendChild(h("span", { className: "val", text: val }));
+        var ch = h("span", { className: "chev" });
+        ch.appendChild(icon("chev"));
+        r.appendChild(ch);
+        r.addEventListener("click", onTap, false);
+        return r;
+      }
+      scroll.appendChild(row("Display", "", function () { showDisplay(); }));
+      scroll.appendChild(row("Data", "", function () { showData(); }));
+      body.appendChild(scroll);
+      root.appendChild(body);
+    }
+
+    function showDisplay() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { showRoot(); }, false);
+      header.appendChild(back);
+      header.appendChild(h("div", { className: "title", text: "Display" }));
+      root.appendChild(header);
+      var body = h("div", { className: "app-body" });
+      var scroll = h("div", { className: "app-scroll scroll" });
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "16px 0 8px" }, text: "Theme" }));
+      var seg = h("div", { className: "seg-control" });
+      var light = h("button", { className: store.settings.theme === "light" ? "active" : "", text: "Light" });
+      var dark = h("button", { className: store.settings.theme === "dark" ? "active" : "", text: "Dark" });
+      light.addEventListener("click", function () { store.settings.theme = "light"; saveStore(); applyTheme(); showDisplay(); }, false);
+      dark.addEventListener("click", function () { store.settings.theme = "dark"; saveStore(); applyTheme(); showDisplay(); }, false);
+      seg.appendChild(light);
+      seg.appendChild(dark);
+      scroll.appendChild(seg);
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "24px 0 8px" }, text: "Text size" }));
+      var scales = [0.9, 1, 1.15, 1.3];
+      var labels = ["Small", "Medium", "Large", "X-Large"];
+      var si;
+      for (si = 0; si < scales.length; si++) {
+        (function (sc, lab) {
+          var r = h("div", { className: "radio-row" });
+          var rad = h("div", { className: "radio" + (store.settings.textScale === sc ? " on" : "") });
+          r.appendChild(rad);
+          r.appendChild(h("span", { text: lab }));
+          r.addEventListener("click", function () {
+            store.settings.textScale = sc;
+            saveStore();
+            applyTheme();
+            showDisplay();
+          }, false);
+          scroll.appendChild(r);
+        })(scales[si], labels[si]);
+      }
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "24px 0 8px" }, text: "Clock" }));
+      var seg2 = h("div", { className: "seg-control" });
+      var b12 = h("button", { className: !store.settings.clock24 ? "active" : "", text: "12-hour" });
+      var b24 = h("button", { className: store.settings.clock24 ? "active" : "", text: "24-hour" });
+      b12.addEventListener("click", function () { store.settings.clock24 = false; saveStore(); showDisplay(); }, false);
+      b24.addEventListener("click", function () { store.settings.clock24 = true; saveStore(); showDisplay(); }, false);
+      seg2.appendChild(b12);
+      seg2.appendChild(b24);
+      scroll.appendChild(seg2);
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "24px 0 8px" }, text: "Week starts" }));
+      var seg3 = h("div", { className: "seg-control" });
+      var mon = h("button", { className: store.settings.weekStartsMonday ? "active" : "", text: "Monday" });
+      var sun = h("button", { className: !store.settings.weekStartsMonday ? "active" : "", text: "Sunday" });
+      mon.addEventListener("click", function () { store.settings.weekStartsMonday = true; saveStore(); K.emit("data"); showDisplay(); }, false);
+      sun.addEventListener("click", function () { store.settings.weekStartsMonday = false; saveStore(); K.emit("data"); showDisplay(); }, false);
+      seg3.appendChild(mon);
+      seg3.appendChild(sun);
+      scroll.appendChild(seg3);
+
+      body.appendChild(scroll);
+      root.appendChild(body);
+    }
+
+    function showData() {
+      root.innerHTML = "";
+      var header = h("div", { className: "app-header" });
+      var back = h("button", { className: "back" });
+      back.appendChild(icon("back"));
+      back.addEventListener("click", function () { showRoot(); }, false);
+      header.appendChild(back);
+      header.appendChild(h("div", { className: "title", text: "Data" }));
+      root.appendChild(header);
+      var body = h("div", { className: "app-body" });
+      var scroll = h("div", { className: "app-scroll scroll" });
+
+      scroll.appendChild(h("div", { style: { fontSize: "20px", marginBottom: "12px" }, text: "Storage: " + (storageOk ? "Working" : "Unavailable (in-memory only)")));
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "20px 0 8px" }, text: "Export backup" }));
+      var ta = h("textarea", { className: "export-area", readOnly: "readonly" });
+      try {
+        ta.value = JSON.stringify(store, function (k, v) { if (k && k.charAt(0) === "_") return undefined; return v; }, 2);
+      } catch (e) { ta.value = "{}"; }
+      scroll.appendChild(ta);
+      var copyBtn = h("button", { className: "btn", text: "Select all", style: { marginTop: "8px", border: "1px solid var(--line)", borderRadius: "22px", padding: "10px 18px" } });
+      copyBtn.addEventListener("click", function () {
+        ta.focus();
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+      }, false);
+      scroll.appendChild(copyBtn);
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "28px 0 8px" }, text: "Import backup" }));
+      var imp = h("textarea", { className: "export-area", placeholder: "Paste JSON backup here" });
+      scroll.appendChild(imp);
+      var impBtn = h("button", { className: "btn primary", text: "Import", style: { marginTop: "8px", border: "1px solid var(--ink)", borderRadius: "22px", padding: "10px 18px", background: "var(--ink)", color: "var(--surface)" } });
+      impBtn.addEventListener("click", function () {
+        try {
+          var data = JSON.parse(imp.value);
+          if (!data || typeof data !== "object") throw new Error("bad");
+          if (data.settings) store.settings = data.settings;
+          if (data.events) store.events = data.events;
+          if (data.countdowns) store.countdowns = data.countdowns;
+          if (data.tasks) store.tasks = data.tasks;
+          if (data.calendars) store.calendars = data.calendars;
+          if (data.categories) store.categories = data.categories;
+          store.ver = VERSION;
+          saveStore(true);
+          applyTheme();
+          K.emit("data");
+          K.emit("settings");
+          showData();
+        } catch (e) {
+          imp.placeholder = "Invalid JSON — try again";
+        }
+      }, false);
+      scroll.appendChild(impBtn);
+
+      scroll.appendChild(h("div", { style: { fontSize: "16px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--muted)", margin: "28px 0 8px" }, text: "Danger zone" }));
+      var clearBtn = h("button", { className: "btn danger", text: "Clear everything", style: { border: "1px solid #B5524A", borderRadius: "22px", padding: "12px 18px", color: "#B5524A" } });
+      clearBtn.addEventListener("click", function () {
+        K.sheet(function (b) {
+          b.appendChild(h("div", { className: "sheet-title", text: "Clear all data?" }));
+          b.appendChild(h("div", { style: { fontSize: "22px", marginBottom: "16px" }, text: "This cannot be undone." }));
+          var actions = h("div", { className: "sheet-actions" });
+          var no = h("button", { className: "btn", text: "Cancel" });
+          no.addEventListener("click", function () { closeSheet(); }, false);
+          var yes = h("button", { className: "btn danger", text: "Clear" });
+          yes.addEventListener("click", function () {
+            store = JSON.parse(JSON.stringify(DEFAULTS));
+            store.ver = VERSION;
+            seedFirstRun();
+            saveStore(true);
+            applyTheme();
+            K.emit("data");
+            closeSheet();
+            showData();
+          }, false);
+          actions.appendChild(no);
+          actions.appendChild(yes);
+          b.appendChild(actions);
+        });
+      }, false);
+      scroll.appendChild(clearBtn);
+
+      body.appendChild(scroll);
+      root.appendChild(body);
+    }
+
+    showRoot();
+    return { destroy: destroy };
+  }
+});
+
+/* ---------- 10. Settings screens (handled inside Settings app) ---------- */
+
+/* ---------- 11. Bootstrap ---------- */
+function buildDock() {
+  var dock = document.getElementById("dock");
+  dock.innerHTML = "";
+  var order = ["calendar", "tasks", "countdowns", "clock", "settings"];
+  var i, app;
+  for (i = 0; i < order.length; i++) {
+    (function (id) {
+      var a = null, j;
+      for (j = 0; j < apps.length; j++) if (apps[j].id === id) { a = apps[j]; break; }
+      if (!a) return;
+      var item = h("button", { className: "dock-item" });
+      var ic = h("div", { className: "icon" });
+      ic.appendChild(a.icon());
+      item.appendChild(ic);
+      item.appendChild(h("div", { className: "label", text: a.name }));
+      item.addEventListener("click", function () {
+        var r = item.getBoundingClientRect();
+        K.go(id, {}, r);
+      }, false);
+      dock.appendChild(item);
+    })(order[i]);
+  }
+}
+
+function showWelcome() {
+  if (store.welcomed) return;
+  K.sheet(function (body) {
+    body.appendChild(h("div", { className: "sheet-title", text: "Welcome to WallOS" }));
+    body.appendChild(h("div", { style: { fontSize: "22px", lineHeight: "1.4", marginBottom: "12px" }, text: "Tap a widget to open it. Swipe up from the bottom or use the Home button to return." }));
+    body.appendChild(h("div", { style: { fontSize: "22px", lineHeight: "1.4", marginBottom: "12px" }, text: "Long-press an event to edit or delete it." }));
+    body.appendChild(h("div", { style: { fontSize: "22px", lineHeight: "1.4", marginBottom: "20px" }, text: "Import calendars later from Settings → Calendars (Phase 3)." }));
+    var actions = h("div", { className: "sheet-actions" });
+    var ok = h("button", { className: "btn primary", text: "Got it" });
+    ok.addEventListener("click", function () {
+      store.welcomed = true;
+      saveStore();
+      closeSheet();
+    }, false);
+    actions.appendChild(ok);
+    body.appendChild(actions);
+  });
+}
+
+function bindGlobalGestures() {
+  document.getElementById("btn-home").addEventListener("click", function () { K.home(); }, false);
+  document.getElementById("sheet-mask").addEventListener("click", function () { closeSheet(); }, false);
+
+  // prevent page scroll
+  document.addEventListener("touchmove", function (ev) {
+    var t = ev.target;
+    var scrollable = false;
+    while (t && t !== document) {
+      if (t.classList && t.classList.contains("scroll")) { scrollable = true; break; }
+      t = t.parentNode;
+    }
+    if (!scrollable) ev.preventDefault();
+  }, { passive: false });
+
+  // wake from ambient / night
+  function wake(ev) {
+    K.lastTouch = Date.now();
+    if (K.state === "AMBIENT") {
+      document.body.classList.remove("state-ambient");
+      document.body.classList.add("state-home");
+      K.state = "HOME";
+      renderHome();
+      if (ev) ev.stopPropagation();
+    } else if (K.state === "NIGHT") {
+      K.nightWakeUntil = Date.now() + 120000;
+      document.body.classList.remove("state-night");
+      document.body.classList.add("state-home");
+      K.state = "HOME";
+      renderHome();
+      if (ev) ev.stopPropagation();
+    }
+  }
+  document.getElementById("ambient").addEventListener("click", wake, false);
+  document.getElementById("night").addEventListener("click", wake, false);
+
+  // track any touch for idle
+  document.addEventListener("touchstart", function () {
+    K.lastTouch = Date.now();
+  }, { passive: true });
+
+  // visibility flush
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") saveStore(true);
+  }, false);
+  window.addEventListener("pagehide", function () { saveStore(true); }, false);
+}
+
+function start() {
+  loadStore();
+  applyTheme();
+  updateStorageGlyph();
+  buildDock();
+  document.body.classList.add("state-home");
+  K.state = "HOME";
+  renderHome();
+  bindGlobalGestures();
+
+  // data-driven widget refresh
+  K.on("data", function () {
+    if (K.state === "HOME") renderHome();
+  });
+  K.on("minute", function () {
+    if (K.state === "HOME") {
+      // light refresh of today widget
+      var wt = document.querySelector("#w-today .widget-body");
+      if (wt) renderTodayWidget(wt.parentNode.querySelector(".widget-body") || wt);
+    }
+  });
+  K.on("day", function () {
+    if (K.state === "HOME") renderHome();
+  });
+
+  K.ticker = setInterval(tick, 1000);
+  tick();
+
+  setTimeout(function () { showWelcome(); }, 400);
+}
+
+start();
+</script>
+</body>
+</html>
